@@ -6,6 +6,13 @@ Deadlock's build editor can copy a build to the clipboard as a text code and pas
 
 It is a single file, `index.html`, with no server and no install.
 
+## Added Functionality
+
+You can paste a build copied from the game into the tool with **Load a code**. Once it is loaded you can:
+
+- **Add duplicates of items.** Put the same item in the build more than once.
+- **Swap the hero.** Change which hero the build applies to, then paste it into that hero's editor.
+
 ## Using it
 
 1. Open `index.html` in a browser, or visit the hosted page if you have set one up (see below).

@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deadlock Build Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600&family=Zilla+Slab:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e6eceb; --panel:#f6f9f8; --raise:#ffffff; --ink:#152226; --muted:#55696b; --line:#c3d0cf;
+  --brass:#8a6410; --brass-ink:#ffffff; --weapon:#b3600c; --vitality:#4d7f12; --spirit:#7a45c4; --danger:#b23a24;
+  --focus:#1f6f8b;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#152023; --panel:#1c2a2e; --raise:#25363b; --ink:#ece5d3; --muted:#9bb0ad; --line:#34494e;
+    --brass:#d6ad52; --brass-ink:#1a1405; --weapon:#e7953f; --vitality:#8cc63f; --spirit:#bd92f2; --danger:#ee7a62;
+    --focus:#7cc7e0;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#152023; --panel:#1c2a2e; --raise:#25363b; --ink:#ece5d3; --muted:#9bb0ad; --line:#34494e;
+  --brass:#d6ad52; --brass-ink:#1a1405; --weapon:#e7953f; --vitality:#8cc63f; --spirit:#bd92f2; --danger:#ee7a62;
+  --focus:#7cc7e0;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);
+  font:400 16px/1.45 "Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:"Zilla Slab",Rockwell,"Roboto Slab",Georgia,serif;font-weight:700;margin:0;line-height:1.15}
+h1{font-size:1.6rem} h2{font-size:1.2rem} h3{font-size:1.05rem;font-weight:600}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--raise);border-radius:6px;padding:.5rem .8rem;min-height:40px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--brass);color:var(--brass-ink);border-color:var(--brass);font-weight:600}
+button.quiet{background:transparent}
+button.icon{padding:0;width:38px;min-height:38px;display:inline-grid;place-items:center;line-height:1}
+button.danger{color:var(--danger)}
+input[type=text],input[type=search],select,textarea{width:100%;background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:.5rem .6rem;min-height:40px}
+textarea{resize:vertical;min-height:64px}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:.2rem}
+.wrap{max-width:1180px;margin:0 auto;padding:1rem 1rem 7.5rem}
+header.top{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:.9rem}
+#sync{font-size:.85rem;color:var(--muted)}
+.builds{display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.4rem;margin-bottom:1rem;align-items:stretch}
+.builds button{white-space:nowrap;flex:none}
+.builds .tab{text-align:left;max-width:15rem;overflow:hidden;text-overflow:ellipsis}
+.builds .tab small{display:block;color:var(--muted);font-size:.75rem}
+.builds .tab[aria-current="true"]{border-color:var(--brass);box-shadow:inset 0 -3px 0 var(--brass)}
+.cols{display:block}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:.9rem;margin-bottom:1rem}
+.grid2{display:grid;gap:.75rem;grid-template-columns:1fr}
+.row{display:flex;gap:.5rem;align-items:center}
+.row.end{justify-content:flex-end}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.85rem;margin:.3rem 0 0}
+.warn{color:var(--danger);font-size:.9rem;margin:.4rem 0 0}
+.cat{border:1px solid var(--line);border-radius:8px;padding:.7rem;margin-top:.7rem;background:var(--bg)}
+.cat.active{border:2px dashed var(--brass);padding:calc(.7rem - 1px)}
+.cat-head{display:flex;gap:.4rem;align-items:center}
+.cat-head input{font-weight:600}
+label.check{display:flex;align-items:center;gap:.45rem;color:var(--ink);font-size:.95rem;margin:.6rem 0 0;cursor:pointer}
+label.check input{width:20px;height:20px;accent-color:var(--brass)}
+.cat-meta{display:flex;gap:.6rem;align-items:center;margin-top:.4rem}
+.cat-meta input[type=text]{font-size:.9rem;min-height:36px}
+.cat-meta .opt{display:flex;align-items:center;gap:.35rem;margin:0;color:var(--ink);font-size:.92rem;white-space:nowrap;cursor:pointer}
+.cat-meta .opt input{width:20px;height:20px;accent-color:var(--brass)}
+.items{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:.35rem}
+.item{background:var(--raise);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:6px;padding:.3rem .3rem .3rem .6rem}
+.item .line{display:flex;align-items:center;gap:.3rem}
+.item .nm{flex:1;min-width:0;overflow-wrap:break-word;line-height:1.25;padding:.15rem 0}
+.item .tier{display:block;font-size:.75rem;color:var(--muted)}
+.item button.icon{width:34px;min-height:34px;border-color:transparent}
+.item.off{opacity:.55}
+.item .off-note{font-size:.78rem;color:var(--danger);margin:.1rem 0 .2rem}
+.item input.note{margin:.3rem 0 .2rem;font-size:.9rem}
+.item .imbue{display:grid;grid-template-columns:auto 1fr;gap:.2rem .5rem;align-items:center;margin:.3rem 0 .2rem}
+.item .imbue label{margin:0}
+.item .imbue select{min-height:36px;font-size:.9rem}
+.item .imbue .off-note{grid-column:1/-1}
+.w{--c:var(--weapon)} .v{--c:var(--vitality)} .s{--c:var(--spirit)} .u{--c:var(--muted)}
+.tags{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+.tags select{width:auto;flex:1 1 9rem;max-width:16rem}
+.chip{display:inline-flex;align-items:center;gap:.1rem;background:var(--raise);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:6px;padding:0 0 0 .55rem;font-size:.92rem}
+.chip button.icon{width:32px;min-height:32px;border-color:transparent}
+.empty{color:var(--muted);font-size:.9rem;margin:.6rem 0 0}
+.abil-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.6rem}
+.abil-btns button{text-align:left}
+.abil-btns .pips{display:block;font-size:.78rem;color:var(--muted)}
+ol.steps{margin:.7rem 0 0;padding-left:1.6rem;display:grid;gap:.15rem;font-size:.92rem}
+/* shop */
+#shop{background:var(--panel)}
+.shop-head{display:flex;gap:.5rem;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+.filters{display:flex;gap:.35rem;flex-wrap:wrap;margin:.6rem 0}
+.filters button{min-height:34px;padding:.25rem .65rem;border-radius:999px}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.shop-list h3{margin:.9rem 0 .35rem;color:var(--c)}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.35rem}
+.shop-grid button{text-align:left;border-left:5px solid var(--c);min-height:42px;padding:.35rem .5rem;font-size:.92rem;position:relative}
+.shop-grid button.off{opacity:.5}
+.shop-grid button .n{position:absolute;top:2px;right:6px;font-size:.72rem;color:var(--muted)}
+.shop-grid button.flash{background:var(--brass);color:var(--brass-ink)}
+/* bottom bar */
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);
+  padding:.6rem 1rem calc(.6rem + env(safe-area-inset-bottom,0px));z-index:5}
+.bar-in{max-width:1180px;margin:0 auto;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.bar-in .primary{flex:1 1 12rem;min-height:48px;font-size:1.05rem}
+#status{flex:1 1 100%;font-size:.85rem;color:var(--muted);min-height:1.2em}
+#codebox{flex:1 1 100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;min-height:70px;word-break:break-all}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:1rem;width:min(34rem,calc(100vw - 2rem))}
+dialog::backdrop{background:rgba(0,0,0,.55)}
+[hidden]{display:none!important}
+@media (max-width:899px){
+  #shop{position:fixed;inset:0;z-index:10;margin:0;border:0;border-radius:0;overflow:auto;
+    padding:calc(.9rem + env(safe-area-inset-top,0px)) .9rem calc(1.2rem + env(safe-area-inset-bottom,0px))}
+  #shop:not(.open){display:none}
+  .shop-head{position:sticky;top:calc(-.9rem - env(safe-area-inset-top,0px));background:var(--panel);
+    padding:calc(.6rem + env(safe-area-inset-top,0px)) 0 .5rem;z-index:1;margin-top:-.6rem}
+}
+@media (min-width:900px){
+  .grid2{grid-template-columns:14rem 1fr}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1rem;align-items:start}
+  #shop{position:sticky;top:1rem;max-height:calc(100vh - 8rem);overflow:auto}
+  #shopClose,.add-items{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.shop-grid button{transition:background-color .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Deadlock Build Maker</h1>
+    <span id="sync" role="status"></span>
+  </header>
+
+  <nav class="builds" id="builds" aria-label="Your builds"></nav>
+
+  <div class="cols">
+    <main id="editor">
+      <section class="panel">
+        <div class="grid2">
+          <div><label for="hero">Hero</label><select id="hero"></select></div>
+          <div><label for="bname">Build name</label><input type="text" id="bname" maxlength="120" autocomplete="off"></div>
+        </div>
+        <div style="margin-top:.75rem"><label for="bdesc">Build description (optional)</label><textarea id="bdesc" maxlength="2000"></textarea></div>
+        <div style="margin-top:.75rem"><label>Build tags (optional, up to 3)</label><div id="tags" class="tags"></div></div>
+        <div class="row end" style="margin-top:.6rem"><button class="quiet danger" id="delBuild">Delete this build</button></div>
+      </section>
+
+      <section class="panel" aria-labelledby="catsH">
+        <div class="spread"><h2 id="catsH">Categories</h2><button id="addCat">Add category</button></div>
+        <p class="hint" id="catHint"></p>
+        <label class="check"><input type="checkbox" id="autoW"> Size each category to fit its items</label>
+        <div id="cats"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="abH">
+        <div class="spread"><h2 id="abH">Ability point order</h2>
+          <span class="row"><button id="abUndo">Undo last step</button><button id="abClear" class="quiet">Clear</button></span></div>
+        <div id="abil"></div>
+      </section>
+    </main>
+
+    <aside class="panel" id="shop" aria-labelledby="shopH">
+      <div class="shop-head"><h2 id="shopH">Items</h2><button id="shopClose" class="primary">Done</button></div>
+      <p class="hint" id="shopTarget" style="margin:0 0 .5rem"></p>
+      <input type="search" id="q" placeholder="Search items" autocomplete="off" aria-label="Search items">
+      <div class="filters" id="filters"></div>
+      <div class="shop-list" id="shopList"></div>
+    </aside>
+  </div>
+</div>
+
+<div class="bar">
+  <div class="bar-in">
+    <button class="primary" id="copy">Copy build code</button>
+    <button id="toggleCode">Show code</button>
+    <span id="status" role="status" aria-live="polite"></span>
+    <textarea id="codebox" readonly hidden aria-label="Build code"></textarea>
+  </div>
+</div>
+
+<dialog id="loadDlg" aria-labelledby="loadH">
+  <h2 id="loadH">Load a build code</h2>
+  <p class="hint">Copy a build in Deadlock, then paste the code here. It opens as a new build you can edit or move to another hero.</p>
+  <textarea id="loadText" style="margin-top:.6rem;min-height:120px" aria-label="Build code to load"></textarea>
+  <p class="warn" id="loadErr" hidden></p>
+  <div class="row end" style="margin-top:.7rem"><button id="loadCancel" class="quiet">Cancel</button><button id="loadGo" class="primary">Load code</button></div>
+</dialog>
+<script>
+/* fzstd 0.1.1, MIT License, (c) Arjun Barrett */
+!function(f){typeof module!='undefined'&&typeof exports=='object'?module.exports=f():typeof define!='undefined'&&define.amd?define(['fzstd',f]):(typeof self!='undefined'?self:this).fzstd=f()}(function(){var _e={};"use strict";var r=ArrayBuffer,t=Uint8Array,e=Uint16Array,n=Int16Array,a=Uint32Array,s=Int32Array,i=function(r,e,n){if(t.prototype.slice)return t.prototype.slice.call(r,e,n);(null==e||e<0)&&(e=0),(null==n||n>r.length)&&(n=r.length);var a=new t(n-e);return a.set(r.subarray(e,n)),a},o=function(r,e,n,a){if(t.prototype.fill)return t.prototype.fill.call(r,e,n,a);for((null==n||n<0)&&(n=0),(null==a||a>r.length)&&(a=r.length);n<a;++n)r[n]=e;return r},u=function(r,e,n,a){if(t.prototype.copyWithin)return t.prototype.copyWithin.call(r,e,n,a);for((null==n||n<0)&&(n=0),(null==a||a>r.length)&&(a=r.length);n<a;)r[e++]=r[n++]};_e.ZstdErrorCode={InvalidData:0,WindowSizeTooLarge:1,InvalidBlockType:2,FSEAccuracyTooHigh:3,DistanceTooFarBack:4,UnexpectedEOF:5};var h=["invalid zstd data","window size too large (>2046MB)","invalid block type","FSE accuracy too high","match distance too far back","unexpected EOF"],f=function(r,t,e){var n=Error(t||h[r]);if(n.code=r,Error.captureStackTrace&&Error.captureStackTrace(n,f),!e)throw n;return n},l=function(r,t,e){for(var n=0,a=0;n<e;++n)a|=r[t++]<<(n<<3);return a},v=function(r,t){return(r[t]|r[t+1]<<8|r[t+2]<<16|r[t+3]<<24)>>>0},c=function(r,e){var n=r[0]|r[1]<<8|r[2]<<16;if(3126568==n&&253==r[3]){var a=r[4],i=a>>5&1,o=a>>2&1,u=3&a,h=a>>6;8&a&&f(0);var c=6-i,b=3==u?4:u,y=l(r,c,b),p=h?1<<h:i,w=l(r,c+=b,p)+(1==h&&256),g=w;if(!i){var d=1<<10+(r[5]>>3);g=d+(d>>3)*(7&r[5])}g>2145386496&&f(1);var m=new t((1==e?w||g:e?0:g)+12);return m[0]=1,m[4]=4,m[8]=8,{b:c+p,y:0,l:0,d:y,w:e&&1!=e?e:m.subarray(12),e:g,o:new s(m.buffer,0,3),u:w,c:o,m:Math.min(131072,g)}}if(25481893==(n>>4|r[3]<<20))return v(r,4)+8;f(0)},b=function(r){for(var t=0;1<<t<=r;++t);return t-1},y=function(a,s,i){var o=4+(s<<3),u=5+(15&a[s]);u>i&&f(3);for(var h=1<<u,l=h,v=-1,c=-1,y=-1,p=h,w=new r(512+(h<<2)),g=new n(w,0,256),d=new e(w,0,256),m=new e(w,512,h),z=512+(h<<1),E=new t(w,z,h),k=new t(w,z+h);v<255&&l>0;){var A=b(l+1),T=o>>3,x=(1<<A+1)-1,F=(a[T]|a[T+1]<<8|a[T+2]<<16)>>(7&o)&x,S=(1<<A)-1,B=x-l-1,I=F&S;if(I<B?(o+=A,F=I):(o+=A+1,F>S&&(F-=B)),g[++v]=--F,-1==F?(l+=F,E[--p]=v):l-=F,!F)do{var U=o>>3;c=(a[U]|a[U+1]<<8)>>(7&o)&3,o+=2,v+=c}while(3==c)}(v>255||l)&&f(0);for(var D=0,M=(h>>1)+(h>>3)+3,W=h-1,O=0;O<=v;++O){var j=g[O];if(j<1)d[O]=-j;else for(y=0;y<j;++y){E[D]=O;do{D=D+M&W}while(D>=p)}}for(D&&f(0),y=0;y<h;++y){var C=d[E[y]]++,H=k[y]=u-b(C);m[y]=(C<<H)-h}return[o+7>>3,{b:u,s:E,n:k,t:m}]},p=function(r,n){var a=0,s=-1,i=new t(292),u=r[n],h=i.subarray(0,256),l=i.subarray(256,268),v=new e(i.buffer,268);if(u<128){var c=y(r,n+1,6),p=c[1],w=c[0]<<3,g=r[n+=u];g||f(0);for(var d=0,m=0,z=p.b,E=z,k=(++n<<3)-8+b(g);!((k-=z)<w);){var A=k>>3;if(h[++s]=p.s[d+=(r[A]|r[A+1]<<8)>>(7&k)&(1<<z)-1],(k-=E)<w)break;h[++s]=p.s[m+=(r[A=k>>3]|r[A+1]<<8)>>(7&k)&(1<<E)-1],z=p.n[d],d=p.t[d],E=p.n[m],m=p.t[m]}++s>255&&f(0)}else{for(s=u-127;a<s;a+=2){var T=r[++n];h[a]=T>>4,h[a+1]=15&T}++n}var x=0;for(a=0;a<s;++a)(I=h[a])>11&&f(0),x+=I&&1<<I-1;var F=b(x)+1,S=1<<F,B=S-x;for(B&B-1&&f(0),h[s++]=b(B)+1,a=0;a<s;++a){var I;++l[h[a]=(I=h[a])&&F+1-I]}var U=new t(S<<1),D=U.subarray(0,S),M=U.subarray(S);for(v[F]=0,a=F;a>0;--a){var W=v[a];o(M,a,W,v[a-1]=W+l[a]*(1<<F-a))}for(v[0]!=S&&f(0),a=0;a<s;++a){var O=h[a];if(O){var j=v[O];o(D,a,j,v[O]=j+(1<<F-O))}}return[n,{n:M,b:F,s:D}]},w=y(new t([81,16,99,140,49,198,24,99,12,33,196,24,99,102,102,134,70,146,4]),0,6)[1],g=y(new t([33,20,196,24,99,140,33,132,16,66,8,33,132,16,66,8,33,68,68,68,68,68,68,68,68,36,9]),0,6)[1],d=y(new t([32,132,16,66,102,70,68,68,68,68,36,73,2]),0,5)[1],m=function(r,t){for(var e=r.length,n=new s(e),a=0;a<e;++a)n[a]=t,t+=1<<r[a];return n},z=new t(new s([0,0,0,0,16843009,50528770,134678020,202050057,269422093]).buffer,0,36),E=m(z,0),k=new t(new s([0,0,0,0,0,0,0,0,16843009,50528770,117769220,185207048,252579084,16]).buffer,0,53),A=m(k,3),T=function(r,t,e){var n=r.length,a=t.length,s=r[n-1],i=(1<<e.b)-1,o=-e.b;s||f(0);for(var u=0,h=e.b,l=(n<<3)-8+b(s)-h,v=-1;l>o&&v<a;){var c=l>>3;t[++v]=e.s[u=(u<<h|(r[c]|r[c+1]<<8|r[c+2]<<16)>>(7&l))&i],l-=h=e.n[u]}l==o&&v+1==a||f(0)},x=function(r,t,e){var n=6,a=t.length+3>>2,s=a<<1,i=a+s;T(r.subarray(n,n+=r[0]|r[1]<<8),t.subarray(0,a),e),T(r.subarray(n,n+=r[2]|r[3]<<8),t.subarray(a,s),e),T(r.subarray(n,n+=r[4]|r[5]<<8),t.subarray(s,i),e),T(r.subarray(n),t.subarray(i),e)},F=function(r,n,a){var s,u=n.b,h=r[u],l=h>>1&3;n.l=1&h;var v=h>>3|r[u+1]<<5|r[u+2]<<13,c=(u+=3)+v;if(1==l){if(u>=r.length)return;return n.b=u+1,a?(o(a,r[u],n.y,n.y+=v),a):o(new t(v),r[u])}if(!(c>r.length)){if(0==l)return n.b=c,a?(a.set(r.subarray(u,c),n.y),n.y+=v,a):i(r,u,c);if(2==l){var m=r[u],F=3&m,S=m>>2&3,B=m>>4,I=0,U=0;F<2?1&S?B|=r[++u]<<4|(2&S&&r[++u]<<12):B=m>>3:(U=S,S<2?(B|=(63&r[++u])<<4,I=r[u]>>6|r[++u]<<2):2==S?(B|=r[++u]<<4|(3&r[++u])<<12,I=r[u]>>2|r[++u]<<6):(B|=r[++u]<<4|(63&r[++u])<<12,I=r[u]>>6|r[++u]<<2|r[++u]<<10)),++u;var D=a?a.subarray(n.y,n.y+n.m):new t(n.m),M=D.length-B;if(0==F)D.set(r.subarray(u,u+=B),M);else if(1==F)o(D,r[u++],M);else{var W=n.h;if(2==F){var O=p(r,u);I+=u-(u=O[0]),n.h=W=O[1]}else W||f(0);(U?x:T)(r.subarray(u,u+=I),D.subarray(M),W)}var j=r[u++];if(j){255==j?j=32512+(r[u++]|r[u++]<<8):j>127&&(j=j-128<<8|r[u++]);var C=r[u++];3&C&&f(0);for(var H=[g,d,w],L=2;L>-1;--L){var Z=C>>2+(L<<1)&3;if(1==Z){var q=new t([0,0,r[u++]]);H[L]={s:q.subarray(2,3),n:q.subarray(0,1),t:new e(q.buffer,0,1),b:0}}else 2==Z?(u=(s=y(r,u,9-(1&L)))[0],H[L]=s[1]):3==Z&&(n.t||f(0),H[L]=n.t[L])}var G=n.t=H,J=G[0],K=G[1],N=G[2],P=r[c-1];P||f(0);var Q=(c<<3)-8+b(P)-N.b,R=Q>>3,V=0,X=(r[R]|r[R+1]<<8)>>(7&Q)&(1<<N.b)-1,Y=(r[R=(Q-=K.b)>>3]|r[R+1]<<8)>>(7&Q)&(1<<K.b)-1,$=(r[R=(Q-=J.b)>>3]|r[R+1]<<8)>>(7&Q)&(1<<J.b)-1;for(++j;--j;){var _=N.s[X],rr=N.n[X],tr=J.s[$],er=J.n[$],nr=K.s[Y],ar=K.n[Y],sr=1<<nr,ir=sr+((r[R=(Q-=nr)>>3]|r[R+1]<<8|r[R+2]<<16|r[R+3]<<24)>>>(7&Q)&sr-1);R=(Q-=k[tr])>>3;var or=A[tr]+((r[R]|r[R+1]<<8|r[R+2]<<16)>>(7&Q)&(1<<k[tr])-1);R=(Q-=z[_])>>3;var ur=E[_]+((r[R]|r[R+1]<<8|r[R+2]<<16)>>(7&Q)&(1<<z[_])-1);if(R=(Q-=rr)>>3,X=N.t[X]+((r[R]|r[R+1]<<8)>>(7&Q)&(1<<rr)-1),R=(Q-=er)>>3,$=J.t[$]+((r[R]|r[R+1]<<8)>>(7&Q)&(1<<er)-1),R=(Q-=ar)>>3,Y=K.t[Y]+((r[R]|r[R+1]<<8)>>(7&Q)&(1<<ar)-1),ir>3)n.o[2]=n.o[1],n.o[1]=n.o[0],n.o[0]=ir-=3;else{var hr=ir-(0!=ur);hr?(ir=3==hr?n.o[0]-1:n.o[hr],hr>1&&(n.o[2]=n.o[1]),n.o[1]=n.o[0],n.o[0]=ir):ir=n.o[0]}for(L=0;L<ur;++L)D[V+L]=D[M+L];M+=ur;var fr=(V+=ur)-ir;if(fr<0){var lr=-fr,vr=n.e+fr;for(lr>or&&(lr=or),L=0;L<lr;++L)D[V+L]=n.w[vr+L];V+=lr,or-=lr,fr=0}for(L=0;L<or;++L)D[V+L]=D[fr+L];V+=or}if(V!=M)for(;M<D.length;)D[V++]=D[M++];else V=D.length;a?n.y+=V:D=i(D,0,V)}else if(a){if(n.y+=B,M)for(L=0;L<B;++L)D[L]=D[M+L]}else M&&(D=i(D,M));return n.b=c,D}f(2)}},S=function(r,e){if(1==r.length)return r[0];for(var n=new t(e),a=0,s=0;a<r.length;++a){var i=r[a];n.set(i,s),s+=i.length}return n};function B(r,t){for(var e=[],n=+!t,a=0,s=0;r.length;){var i=c(r,n||t);if("object"==typeof i){for(n?(t=null,i.w.length==i.u&&(e.push(t=i.w),s+=i.u)):(e.push(t),i.e=0);!i.l;){var o=F(r,i,t);o||f(5),t?i.e=i.y:(e.push(o),s+=o.length,u(i.w,0,o.length),i.w.set(o,i.w.length-o.length))}a=i.b+4*i.c}else a=i;r=r.subarray(a)}return S(e,s)}_e.decompress=B;var I=function(){function r(r){this.ondata=r,this.c=[],this.l=0,this.z=0}return r.prototype.push=function(r,e){if("number"==typeof this.s){var n=Math.min(r.length,this.s);r=r.subarray(n),this.s-=n}var a=r.length+this.l;if(!this.s){if(e){if(!a)return void this.ondata(new t(0),!0);a<5&&f(5)}else if(a<18)return this.c.push(r),void(this.l=a);if(this.l&&(this.c.push(r),r=S(this.c,a),this.c=[],this.l=0),"number"==typeof(this.s=c(r)))return this.push(r,e)}if("number"!=typeof this.s){if(a<(this.z||3))return e&&f(5),this.c.push(r),void(this.l=a);if(this.l&&(this.c.push(r),r=S(this.c,a),this.c=[],this.l=0),!this.z&&a<(this.z=2&r[this.s.b]?4:3+(r[this.s.b]>>3|r[this.s.b+1]<<5|r[this.s.b+2]<<13)))return e&&f(5),this.c.push(r),void(this.l=a);for(this.z=0;;){var s=F(r,this.s);if(!s){e&&f(5);var i=r.subarray(this.s.b);return this.s.b=0,this.c.push(i),void(this.l+=i.length)}if(this.ondata(s,!1),u(this.s.w,0,s.length),this.s.w.set(s,this.s.w.length-s.length),this.s.l){var o=r.subarray(this.s.b);return this.s=4*this.s.c,void this.push(o,e)}}}else e&&f(5)},r}();_e.Decompress=I;return _e})
+</script>
+<script>
+var DATA={"heroes":[{"id":6,"n":"Abrams","a":[[4072270083,"Siphon Life"],[2824119765,"Shoulder Charge"],[715762406,"Infernal Resilience"],[509856396,"Seismic Impact"]]},{"id":77,"n":"Apollo","a":[[725153709,"Disengaging Sigil"],[2006773718,"Riposte"],[147493976,"Flawless Advance"],[494112189,"Itani Lo Sahn"]]},{"id":88,"n":"Baba","a":[]},{"id":15,"n":"Bebop","a":[[3089858203,"Exploding Uppercut"],[2521902222,"Sticky Bomb"],[1928108461,"Grapple Arm"],[3832675871,"Hyper Beam"]]},{"id":72,"n":"Billy","a":[[1841661392,"Bashdown"],[1792773251,"Rising Ram"],[3296031213,"Blasted"],[3762861984,"Chain Gang"]]},{"id":16,"n":"Calico","a":[[4131517918,"Gloom Bombs"],[1426567660,"Leaping Slash"],[1009029159,"Ava"],[2054144742,"Return to Shadows"]]},{"id":81,"n":"Celeste","a":[[3443575800,"Light Eater"],[1950738949,"Dazzling Trick"],[1011349580,"Radiant Daggers"],[2590796390,"Shining Wonder"]]},{"id":78,"n":"Deadman Danny","a":[]},{"id":64,"n":"Drifter","a":[[3120550633,"Rend"],[1264175662,"Stalker's Mark"],[1033019133,"Bloodscent"],[1168182161,"Eternal Night"]]},{"id":11,"n":"Dynamo","a":[[3760705623,"Kinetic Pulse"],[2031714424,"Quantum Entanglement"],[492030745,"Rejuvenating Aurora"],[249410288,"Singularity"]]},{"id":76,"n":"Graves","a":[[3214055642,"Jar of Dead"],[2001589780,"Grasping Hands"],[629925354,"Essence Theft"],[4110547059,"Borrowed Decree"]]},{"id":17,"n":"Grey Talon","a":[[548943648,"Charged Shot"],[3452399392,"Rain of Arrows"],[512733154,"Spirit Snare"],[3242902780,"Guided Owl"]]},{"id":13,"n":"Haze","a":[[2948410412,"Sleep Dagger"],[2414191464,"Smoke Bomb"],[1080948381,"Fixation"],[731943444,"Bullet Dance"]]},{"id":14,"n":"Holliday","a":[[1235098866,"Powder Keg"],[2240607294,"Bounce Pad"],[4179229681,"Crackshot"],[3190606822,"Spirit Lasso"]]},{"id":1,"n":"Infernus","a":[[491391007,"Napalm"],[3516947824,"Flame Dash"],[1593133799,"Afterburn"],[1142270357,"Concussive Combustion"]]},{"id":20,"n":"Ivy","a":[[4111222521,"Entangling Thorns"],[1531378655,"Kudzu Connection"],[3642273386,"Stone Form"],[1247583368,"Air Drop"]]},{"id":12,"n":"Kelvin","a":[[18921423,"Frost Grenade"],[1963397252,"Ice Path"],[2351041382,"Arctic Beam"],[3826390464,"Frozen Shelter"]]},{"id":4,"n":"Lady Geist","a":[[715325746,"Essence Bomb"],[218284420,"Life Drain"],[3230530872,"Malice"],[1307289689,"Soul Exchange"]]},{"id":31,"n":"Lash","a":[[3561817145,"Ground Strike"],[2670099061,"Grapple"],[519124136,"Flog"],[397010810,"Death Slam"]]},{"id":8,"n":"McGinnis","a":[[3133377790,"Mini Turret"],[2142734020,"Medicinal Specter"],[1725685134,"Spectral Wall"],[3503044146,"Heavy Barrage"]]},{"id":63,"n":"Mina","a":[[193508101,"Rake"],[2398133749,"Sanguine Retreat"],[1233782561,"Love Bites"],[3379486147,"Nox Nostra"]]},{"id":52,"n":"Mirage","a":[[3733594387,"Fire Scarabs"],[1336069669,"Dust Devil"],[2221949202,"Djinn's Mark"],[2604653402,"Traveler"]]},{"id":18,"n":"Mo & Krill","a":[[1454278799,"Scorn"],[2406758797,"Burrow"],[1914797280,"Sand Blast"],[1917840730,"Combo"]]},{"id":87,"n":"Nurse Harrow","a":[]},{"id":67,"n":"Paige","a":[[604448162,"Bookwyrm"],[3553292912,"Plot Armor"],[3054993162,"Captivating Read"],[1841901343,"Rallying Charge"]]},{"id":10,"n":"Paradox","a":[[58655583,"Pulse Grenade"],[1366719170,"Time Wall"],[1128670012,"Kinetic Carbine"],[2917891787,"Paradoxical Swap"]]},{"id":50,"n":"Pocket","a":[[938149308,"Barrage"],[1976701714,"Flying Cloak"],[3747867012,"Enchanter's Satchel"],[2954330093,"Affliction"]]},{"id":84,"n":"Rat King","a":[[3002308408,"Scrap Grenade"],[3681399397,"Rat Swarm"],[690412829,"Royal Pestments"],[1627989937,"Rule, Ratannia!"]]},{"id":79,"n":"Rem","a":[[3692321247,"Pillow Toss"],[1568845221,"Tag Along"],[536278136,"Lil Helpers"],[2396527575,"Naptime"]]},{"id":2,"n":"Seven","a":[[1065103387,"Lightning Ball"],[1074714947,"Static Charge"],[539192269,"Power Surge"],[2061574352,"Storm Cloud"]]},{"id":19,"n":"Shiv","a":[[2460791803,"Serrated Knives"],[1458044103,"Slice and Dice"],[1537272748,"Bloodletting"],[1835738020,"Killing Blow"]]},{"id":80,"n":"Silver","a":[[1385849824,"Slam Fire"],[2717130900,"Boot Kick"],[3983754897,"Entangling Bola"],[515791019,"Lycan Curse"]]},{"id":60,"n":"Sinclair","a":[[3156905386,"Vexing Bolt"],[12456023,"Spectral Assistant"],[2142213586,"Rabbit Hex"],[191022746,"Audience Participation"]]},{"id":85,"n":"Solomon","a":[]},{"id":69,"n":"The Doorman","a":[[103496908,"Call Bell"],[109766091,"Doorway"],[1719512318,"Luggage Cart"],[1703045691,"Hotel Guest"]]},{"id":65,"n":"Venator","a":[[911307831,"Consecrating Grenade"],[1764146857,"Gutshot"],[11154161,"Hex-Lined Snap Trap"],[2918874166,"Ira Domini"]]},{"id":66,"n":"Victor","a":[[2043074967,"Pain Battery"],[3727084744,"Jumpstart"],[1472593493,"Aura of Suffering"],[3493884851,"Shocking Reanimation"]]},{"id":3,"n":"Vindicta","a":[[537527508,"Stake"],[1796564033,"Flight"],[2048438176,"Crow Familiar"],[775377419,"Assassinate"]]},{"id":86,"n":"Violet","a":[]},{"id":35,"n":"Viscous","a":[[3247040238,"Splatter"],[3788152387,"The Cube"],[1020817390,"Puddle Punch"],[4206531918,"Goo Ball"]]},{"id":58,"n":"Vyper","a":[[645773760,"Screwjab Dagger"],[3428732129,"Lethal Venom"],[1469918191,"Slither"],[1594727071,"Petrifying Bola"]]},{"id":25,"n":"Warden","a":[[2656490109,"Alchemical Flask"],[2751689917,"Willpower"],[1656913918,"Binding Word"],[2702908623,"Last Stand"]]},{"id":7,"n":"Wraith","a":[[1999680326,"Card Trick"],[4147641675,"Project Mind"],[1842576017,"Full Auto"],[2981692841,"Telekinesis"]]},{"id":27,"n":"Yamato","a":[[3255651252,"Power Slash"],[2566573207,"Flying Slash"],[2366960452,"Crimson Slash"],[3319782965,"Shadow Transformation"]]}],"items":[{"id":3776945997,"n":"Extra Charge","s":"s","t":1,"k":"EC"},{"id":968099481,"n":"Extra Spirit","s":"s","t":1,"k":"ES XS"},{"id":2462046703,"n":"Golden Goose Egg","s":"s","t":1,"k":"GGE"},{"id":1998374645,"n":"Mystic Burst","s":"s","t":1,"k":"MB"},{"id":754480263,"n":"Mystic Expansion","s":"s","t":1,"i":1,"k":"ME MX"},{"id":1439347412,"n":"Mystic Regeneration","s":"s","t":1,"k":"MR"},{"id":2922054143,"n":"Rusted Barrel","s":"s","t":1,"k":"RB"},{"id":465043967,"n":"Spirit Strike","s":"s","t":1,"k":"SS"},{"id":1150006784,"n":"Arcane Surge","s":"s","t":2,"k":"AS"},{"id":2971868509,"n":"Bullet Resist Shredder","s":"s","t":2,"k":"BRS"},{"id":1976391348,"n":"Cold Front","s":"s","t":2,"k":"CF"},{"id":380806748,"n":"Compress Cooldown","s":"s","t":2,"i":1,"k":"CCD"},{"id":2951612397,"n":"Duration Extender","s":"s","t":2,"i":1,"k":"DE DX"},{"id":7409189,"n":"Improved Spirit","s":"s","t":2,"k":"IS"},{"id":1102081447,"n":"Mystic Slow","s":"s","t":2,"k":"MS"},{"id":2081037738,"n":"Mystic Vulnerability","s":"s","t":2,"k":"MV"},{"id":84321454,"n":"Quicksilver Reload","s":"s","t":2,"i":1,"k":"QSR QR"},{"id":1813726886,"n":"Slowing Hex","s":"s","t":2,"k":"SH"},{"id":1219329868,"n":"Spirit Sap","s":"s","t":2,"k":"SS"},{"id":1925087134,"n":"Suppressor","s":"s","t":2},{"id":3144988365,"n":"Decay","s":"s","t":3},{"id":2061878743,"n":"Disarming Hex","s":"s","t":3,"k":"DH"},{"id":1193964439,"n":"Greater Expansion","s":"s","t":3,"i":1,"k":"GE GX"},{"id":1254091416,"n":"Knockdown","s":"s","t":3,"k":"KD"},{"id":2947183272,"n":"Radiant Regeneration","s":"s","t":3,"k":"RR"},{"id":787198704,"n":"Rapid Recharge","s":"s","t":3,"k":"RR"},{"id":619484391,"n":"Silence Wave","s":"s","t":3,"k":"SW"},{"id":3190916303,"n":"Spirit Snatch","s":"s","t":3,"k":"SS"},{"id":3261353684,"n":"Superior Cooldown","s":"s","t":3,"k":"SCD"},{"id":2717651715,"n":"Superior Duration","s":"s","t":3,"i":1,"k":"SD"},{"id":1292979587,"n":"Surge of Power","s":"s","t":3,"i":1,"k":"SP SoP"},{"id":2121044373,"n":"Tankbuster","s":"s","t":3,"k":"TB"},{"id":395944548,"n":"Torment Pulse","s":"s","t":3,"k":"TP"},{"id":3812615317,"n":"Arctic Blast","s":"s","t":4,"k":"AB"},{"id":2519598785,"n":"Boundless Spirit","s":"s","t":4,"k":"BS"},{"id":2617435668,"n":"Cursed Relic","s":"s","t":4,"k":"CR"},{"id":630839635,"n":"Echo Shard","s":"s","t":4,"i":1,"k":"ES"},{"id":3005970438,"n":"Escalating Exposure","s":"s","t":4,"k":"EE EX"},{"id":2533252781,"n":"Ethereal Shift","s":"s","t":4,"k":"ES"},{"id":2142980412,"n":"Focus Lens","s":"s","t":4,"k":"FL"},{"id":493591231,"n":"Lightning Scroll","s":"s","t":4,"x":[12,27,52,64,50],"k":"LS"},{"id":2800629741,"n":"Magic Carpet","s":"s","t":4,"k":"MC"},{"id":3919289022,"n":"Mercurial Magnum","s":"s","t":4,"i":1,"k":"MM"},{"id":3577481646,"n":"Mystic Reverb","s":"s","t":4,"i":1,"k":"MR"},{"id":677738769,"n":"Refresher","s":"s","t":4,"k":"RF"},{"id":2417568017,"n":"Scourge","s":"s","t":4},{"id":343572757,"n":"Spirit Burn","s":"s","t":4,"k":"SB"},{"id":915014646,"n":"Transcendent Cooldown","s":"s","t":4,"k":"TCD"},{"id":1152158042,"n":"Vortex Web","s":"s","t":4,"k":"VW"},{"id":2068250483,"n":"Frostbite Charm","s":"s","t":5,"i":1},{"id":4050602737,"n":"Mystic Conduit","s":"s","t":5},{"id":2054088113,"n":"Mystical Piano","s":"s","t":5},{"id":424779525,"n":"Omnicharge Signet","s":"s","t":5,"i":1},{"id":1132564516,"n":"Prism Blast","s":"s","t":5},{"id":4121584236,"n":"Shrink Ray","s":"s","t":5},{"id":1558545403,"n":"Unstable Concoction","s":"s","t":5},{"id":3633614685,"n":"Extra Health","s":"v","t":1,"k":"EH XH"},{"id":2829638276,"n":"Extra Regen","s":"v","t":1,"k":"ER XR"},{"id":4139877411,"n":"Extra Stamina","s":"v","t":1,"k":"ES XS"},{"id":1672893796,"n":"Grit","s":"v","t":1},{"id":1710079648,"n":"Healing Rite","s":"v","t":1,"k":"HR"},{"id":1437614329,"n":"Melee Lifesteal","s":"v","t":1,"k":"ML"},{"id":4204808176,"n":"Rebuttal","s":"v","t":1},{"id":3399065363,"n":"Sprint Boots","s":"v","t":1,"k":"SB"},{"id":1235347618,"n":"Battle Vest","s":"v","t":2,"k":"BV"},{"id":499683006,"n":"Bullet Lifesteal","s":"v","t":2,"k":"BLS"},{"id":1047818222,"n":"Debuff Reducer","s":"v","t":2,"k":"DR"},{"id":3970837787,"n":"Enchanter's Emblem","s":"v","t":2,"k":"EE"},{"id":2447176615,"n":"Enduring Speed","s":"v","t":2,"k":"ES"},{"id":857669956,"n":"Guardian Ward","s":"v","t":2,"k":"GW"},{"id":2603935618,"n":"Healbane","s":"v","t":2,"k":"HB"},{"id":2566692615,"n":"Healing Booster","s":"v","t":2,"k":"HB"},{"id":1644605047,"n":"Reactive Barrier","s":"v","t":2,"k":"RB"},{"id":2059712766,"n":"Restorative Locket","s":"v","t":2,"k":"RL"},{"id":3361075077,"n":"Return Fire","s":"v","t":2,"k":"RF"},{"id":876563814,"n":"Spirit Lifesteal","s":"v","t":2,"k":"SLS"},{"id":112198670,"n":"Spirit Shielding","s":"v","t":2,"k":"SS"},{"id":3074274290,"n":"Trophy Collector","s":"v","t":2,"k":"TC"},{"id":805079544,"n":"Weapon Shielding","s":"v","t":2,"k":"WS"},{"id":3140772621,"n":"Bullet Resilience","s":"v","t":3,"k":"BR"},{"id":1414025773,"n":"Counterspell","s":"v","t":3,"k":"CS"},{"id":3731635960,"n":"Dispel Magic","s":"v","t":3,"k":"DM dbr debuff remover"},{"id":3585132399,"n":"Fortitude","s":"v","t":3},{"id":1409190604,"n":"Fury Trance","s":"v","t":3,"k":"FT"},{"id":2956256701,"n":"Healing Nova","s":"v","t":3,"k":"HN"},{"id":1252627263,"n":"Lifestrike","s":"v","t":3,"k":"LS"},{"id":600033864,"n":"Majestic Leap","s":"v","t":3,"k":"ML"},{"id":1378931225,"n":"Metal Skin","s":"v","t":3,"k":"MS"},{"id":1804594021,"n":"Rescue Beam","s":"v","t":3,"k":"RB"},{"id":2163598980,"n":"Spirit Resilience","s":"v","t":3,"k":"SR"},{"id":334300056,"n":"Stamina Mastery","s":"v","t":3,"k":"SM Sup Stam"},{"id":865958998,"n":"Veil Walker","s":"v","t":3,"k":"VW"},{"id":3270001687,"n":"Warp Stone","s":"v","t":3,"k":"WS"},{"id":3361811174,"n":"Cheat Death","s":"v","t":4,"k":"CD"},{"id":2407781327,"n":"Colossus","s":"v","t":4},{"id":1662311306,"n":"Divine Barrier","s":"v","t":4,"k":"DB DVB"},{"id":2820116164,"n":"Diviner's Kevlar","s":"v","t":4,"k":"DK DVK"},{"id":1427630806,"n":"Healing Tempo","s":"v","t":4,"k":"HT"},{"id":951866250,"n":"Indomitable","s":"v","t":4,"k":"Cleanse"},{"id":1797283378,"n":"Infuser","s":"v","t":4,"k":"IF"},{"id":2037039379,"n":"Inhibitor","s":"v","t":4,"k":"IH"},{"id":1250307611,"n":"Juggernaut","s":"v","t":4,"k":"JN"},{"id":865846625,"n":"Leech","s":"v","t":4},{"id":1371725689,"n":"Phantom Strike","s":"v","t":4,"k":"PS"},{"id":3491236900,"n":"Plated Armor","s":"v","t":4,"k":"PA"},{"id":1282141666,"n":"Siphon Bullets","s":"v","t":4,"k":"SB"},{"id":1955841979,"n":"Spellbreaker","s":"v","t":4,"k":"SB"},{"id":3357231760,"n":"Unstoppable","s":"v","t":4,"k":"US"},{"id":1055679805,"n":"Vampiric Burst","s":"v","t":4,"k":"VB"},{"id":3028234315,"n":"Witchmail","s":"v","t":4,"k":"WM"},{"id":3729138568,"n":"Celestial Blessing","s":"v","t":5},{"id":3523480953,"n":"Cloak of Opportunity","s":"v","t":5},{"id":1825399334,"n":"Electric Slippers","s":"v","t":5},{"id":230297145,"n":"Eternal Gift","s":"v","t":5},{"id":3949773228,"n":"Nullification Burst","s":"v","t":5},{"id":1736094134,"n":"Seraphim Wings","s":"v","t":5},{"id":2319629810,"n":"Shadow Strike","s":"v","t":5},{"id":1342610602,"n":"Close Quarters","s":"w","t":1,"k":"CQ"},{"id":1548066885,"n":"Extended Magazine","s":"w","t":1,"k":"XM EM Ext Mag"},{"id":2010028405,"n":"Headshot Booster","s":"w","t":1,"x":[76,78],"k":"HSB HS Booster"},{"id":3077079169,"n":"High-Velocity Rounds","s":"w","t":1,"k":"HVR HV Rounds"},{"id":1009965641,"n":"Monster Rounds","s":"w","t":1,"k":"MR"},{"id":668299740,"n":"Rapid Rounds","s":"w","t":1,"k":"RR"},{"id":3862866912,"n":"Restorative Shot","s":"w","t":1,"k":"RS Resto Shot"},{"id":381961617,"n":"Active Reload","s":"w","t":2,"k":"AR"},{"id":3403085434,"n":"Fleetfoot","s":"w","t":2,"k":"Active FF AFF"},{"id":2407033488,"n":"Intensifying Magazine","s":"w","t":2,"k":"IM Int Mag"},{"id":3977876567,"n":"Kinetic Dash","s":"w","t":2,"k":"KD"},{"id":3331811235,"n":"Long Range","s":"w","t":2,"k":"LR"},{"id":26002154,"n":"Melee Charge","s":"w","t":2,"k":"MC"},{"id":395867183,"n":"Mystic Shot","s":"w","t":2,"k":"MS"},{"id":2064029594,"n":"Opening Rounds","s":"w","t":2,"k":"OR"},{"id":1763073141,"n":"Recharging Rush","s":"w","t":2,"k":"RR"},{"id":393974127,"n":"Slowing Bullets","s":"w","t":2,"k":"SB"},{"id":1144549437,"n":"Spirit Shredder","s":"w","t":2,"k":"SSB"},{"id":3647584222,"n":"Split Shot","s":"w","t":2,"k":"SS"},{"id":98582110,"n":"Stalker","s":"w","t":2},{"id":4104549924,"n":"Swift Striker","s":"w","t":2,"k":"SS"},{"id":2356412290,"n":"Titanic Magazine","s":"w","t":2,"k":"TM T-Mag"},{"id":1770441818,"n":"Weakening Headshot","s":"w","t":2,"x":[76,78],"k":"WHS Weaken HS"},{"id":1932939246,"n":"Alchemical Fire","s":"w","t":3,"k":"AF"},{"id":3294954488,"n":"Ballistic Enchantment","s":"w","t":3,"i":1,"k":"BE"},{"id":1414319208,"n":"Berserker","s":"w","t":3,"k":"Zerk"},{"id":989206714,"n":"Blood Tribute","s":"w","t":3,"k":"BT"},{"id":2739107182,"n":"Burst Fire","s":"w","t":3,"k":"BF"},{"id":709540378,"n":"Cultist Sacrifice","s":"w","t":3,"k":"CS"},{"id":2463960640,"n":"Escalating Resilience","s":"w","t":3,"k":"ER"},{"id":690458959,"n":"Express Shot","s":"w","t":3,"k":"ES XS"},{"id":4053935515,"n":"Headhunter","s":"w","t":3,"x":[76,78],"k":"HH"},{"id":2108215830,"n":"Heroic Aura","s":"w","t":3,"k":"HA"},{"id":2678489038,"n":"Hollow Point","s":"w","t":3,"k":"HP"},{"id":2481177645,"n":"Hunter's Aura","s":"w","t":3,"k":"HA"},{"id":2095565695,"n":"Point Blank","s":"w","t":3,"k":"PB"},{"id":1798666702,"n":"Shadow Weave","s":"w","t":3,"k":"SW"},{"id":2152872419,"n":"Sharpshooter","s":"w","t":3,"k":"SS"},{"id":4075861416,"n":"Spirit Rend","s":"w","t":3,"x":[76,78],"k":"SR"},{"id":811521119,"n":"Tesla Bullets","s":"w","t":3,"k":"TB"},{"id":3696726732,"n":"Toxic Bullets","s":"w","t":3,"k":"TB"},{"id":3791587546,"n":"Weighted Shots","s":"w","t":3,"k":"WS"},{"id":673001892,"n":"Armor Piercer","s":"w","t":4,"k":"APR"},{"id":710436191,"n":"Capacitor","s":"w","t":4},{"id":3884003354,"n":"Crippling Headshot","s":"w","t":4,"x":[76,78],"k":"CHS"},{"id":800008313,"n":"Crushing Fists","s":"w","t":4,"k":"CF"},{"id":339443430,"n":"Frenzy","s":"w","t":4},{"id":365620721,"n":"Glass Cannon","s":"w","t":4,"k":"GC"},{"id":1396247347,"n":"Lucky Shot","s":"w","t":4,"k":"LS"},{"id":2480592370,"n":"Ricochet","s":"w","t":4,"x":[78]},{"id":1113837674,"n":"Silencer","s":"w","t":4},{"id":2221211450,"n":"Spellslinger","s":"w","t":4,"k":"SS"},{"id":2226497419,"n":"Spiritual Overflow","s":"w","t":4,"k":"SOF"},{"id":3568217437,"n":"Haunting Shot","s":"w","t":5},{"id":3269957497,"n":"Infinite Rounds","s":"w","t":5},{"id":64550694,"n":"Runed Gauntlets","s":"w","t":5}],"tags":[[47026193,"Weapon"],[4213205702,"Vitality"],[36498494,"Spirit"],[1052421347,"For New Players"],[1150155374,"For Intermediate Players"],[3797987367,"For Advanced Players"],[2592289373,"Damage"],[953263904,"Utility"],[38758251,"Healing"],[4216803923,"Crowd Control"],[3238474489,"Mobility"],[3401565923,"Melee"],[2579669585,"Headshots"],[255841590,"Debuff"]]};
+</script>
+<script>
+/* Build-code codec: base64( zstd( protobuf build message ) ) */
+var Codec = (function () {
+  function b64ToBytes(s) {
+    s = s.replace(/[^A-Za-z0-9+/=_-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function bytesToB64(b) {
+    var s = '';
+    for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s);
+  }
+  var te = new TextEncoder(), td = new TextDecoder('utf-8');
+
+  /* ---- protobuf reading ---- */
+  function readVarint(d, pos) {
+    var v = 0n, sh = 0n, c;
+    do {
+      if (pos.i >= d.length) throw new Error('truncated');
+      c = d[pos.i++];
+      v |= BigInt(c & 0x7f) << sh; sh += 7n;
+    } while (c & 0x80);
+    return v;
+  }
+  function readFields(d) {
+    var pos = { i: 0 }, out = [];
+    while (pos.i < d.length) {
+      var key = Number(readVarint(d, pos)), f = key >>> 3, w = key & 7, v;
+      if (w === 0) v = readVarint(d, pos);
+      else if (w === 2) {
+        var l = Number(readVarint(d, pos));
+        if (pos.i + l > d.length) throw new Error('truncated');
+        v = d.subarray(pos.i, pos.i + l); pos.i += l;
+      } else if (w === 5) { v = d.subarray(pos.i, pos.i + 4); pos.i += 4; }
+      else if (w === 1) { v = d.subarray(pos.i, pos.i + 8); pos.i += 8; }
+      else throw new Error('unsupported wire type');
+      out.push({ f: f, w: w, v: v });
+    }
+    return out;
+  }
+  function f32(b) { return new DataView(b.buffer, b.byteOffset, 4).getFloat32(0, true); }
+
+  /* ---- protobuf writing ---- */
+  function W() { this.a = []; }
+  W.prototype.varint = function (v) {
+    v = BigInt.asUintN(64, BigInt(v));
+    while (v > 0x7fn) { this.a.push(Number(v & 0x7fn) | 0x80); v >>= 7n; }
+    this.a.push(Number(v));
+    return this;
+  };
+  W.prototype.V = function (f, v) { return this.varint(f << 3).varint(v); };
+  W.prototype.B = function (f, bytes) {
+    this.varint((f << 3) | 2).varint(bytes.length);
+    for (var i = 0; i < bytes.length; i++) this.a.push(bytes[i]);
+    return this;
+  };
+  W.prototype.S = function (f, str) { return this.B(f, te.encode(str || '')); };
+  W.prototype.F = function (f, x) {
+    this.varint((f << 3) | 5);
+    var b = new Uint8Array(4); new DataView(b.buffer).setFloat32(0, x, true);
+    for (var i = 0; i < 4; i++) this.a.push(b[i]);
+    return this;
+  };
+  W.prototype.bytes = function () { return Uint8Array.from(this.a); };
+
+  /* ---- zstd: write an uncompressed (raw-block) frame; the game accepts these ---- */
+  function zstdRaw(p) {
+    var n = p.length, head;
+    if (n > 120000) throw new Error('Build is too large to encode');
+    if (n <= 255) head = [0x20, n];
+    else if (n <= 65791) head = [0x60, (n - 256) & 255, (n - 256) >> 8];
+    else head = [0xA0, n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255];
+    var bh = (n << 3) | 1;
+    var out = new Uint8Array(4 + head.length + 3 + n);
+    out.set([0x28, 0xB5, 0x2F, 0xFD], 0);
+    out.set(head, 4);
+    out.set([bh & 255, (bh >> 8) & 255, (bh >> 16) & 255], 4 + head.length);
+    out.set(p, 7 + head.length);
+    return out;
+  }
+
+  function decode(code, decompress) {
+    var raw = b64ToBytes(code.trim());
+    if (raw.length < 8 || raw[0] !== 0x28 || raw[1] !== 0xB5 || raw[2] !== 0x2F || raw[3] !== 0xFD)
+      throw new Error('That does not look like a Deadlock build code.');
+    var p = decompress(raw);
+    var b = { buildId: 1, heroId: 0, name: '', desc: '', cats: [], abil: [], tags: [] };
+    readFields(p).forEach(function (x) {
+      if (x.f === 1 && x.w === 0) b.buildId = Number(x.v);
+      else if (x.f === 2 && x.w === 0) b.heroId = Number(x.v);
+      else if (x.f === 5 && x.w === 2) b.name = td.decode(x.v);
+      else if (x.f === 6 && x.w === 2) b.desc = td.decode(x.v);
+      else if (x.f === 11 && x.w === 0) b.tags.push(Number(x.v));
+      else if (x.f === 10 && x.w === 2) {
+        readFields(x.v).forEach(function (y) {
+          if (y.f === 1 && y.w === 2) {
+            var c = { name: '', desc: '', w: 600, h: 0, opt: false, items: [] };
+            readFields(y.v).forEach(function (z) {
+              if (z.f === 1 && z.w === 2) {
+                var it = { id: 0, note: '', nf: false, imbue: 0 };
+                readFields(z.v).forEach(function (m) {
+                  if (m.f === 1 && m.w === 0) it.id = Number(m.v);
+                  else if (m.f === 2 && m.w === 2) { it.note = td.decode(m.v); it.nf = true; }
+                  else if (m.f === 5 && m.w === 0) it.imbue = Number(m.v);
+                });
+                c.items.push(it);
+              } else if (z.f === 2 && z.w === 2) c.name = td.decode(z.v);
+              else if (z.f === 3 && z.w === 2) c.desc = td.decode(z.v);
+              else if (z.f === 4 && z.w === 5) c.w = f32(z.v);
+              else if (z.f === 5 && z.w === 5) c.h = f32(z.v);
+              else if (z.f === 6 && z.w === 0) c.opt = z.v !== 0n;
+            });
+            b.cats.push(c);
+          } else if (y.f === 2 && y.w === 2) {
+            readFields(y.v).forEach(function (z) {
+              if (z.f !== 1 || z.w !== 2) return;
+              var s = { id: 0, t: 1, d: -1 };
+              readFields(z.v).forEach(function (m) {
+                if (m.f === 1) s.id = Number(m.v);
+                else if (m.f === 2) s.t = Number(m.v);
+                else if (m.f === 3) s.d = Number(BigInt.asIntN(64, m.v));
+              });
+              b.abil.push(s);
+            });
+          }
+        });
+      }
+    });
+    return b;
+  }
+
+  function payload(b) {
+    var details = new W();
+    (b.cats || []).forEach(function (c) {
+      var cw = new W();
+      (c.items || []).forEach(function (it) {
+        var mw = new W().V(1, it.id);
+        if (it.note || it.nf || it.imbue) mw.S(2, it.note).V(4, 0);
+        if (it.imbue) mw.V(5, it.imbue);
+        cw.B(1, mw.bytes());
+      });
+      cw.S(2, c.name).S(3, c.desc || '').F(4, c.w || 600);
+      if (c.h) cw.F(5, c.h);
+      if (c.opt) cw.V(6, 1);
+      details.B(1, cw.bytes());
+    });
+    if (b.abil && b.abil.length) {
+      var aw = new W();
+      b.abil.forEach(function (s) { aw.B(1, new W().V(1, s.id).V(2, s.t).V(3, s.d).bytes()); });
+      details.B(2, aw.bytes());
+    }
+    var out = new W().V(1, b.buildId || 1).V(2, b.heroId).S(5, b.name).S(6, b.desc || '')
+      .V(7, 0).V(8, 0).B(10, details.bytes());
+    (b.tags || []).forEach(function (t) { out.V(11, t); });
+    return out.bytes();
+  }
+  function encode(b) { return bytesToB64(zstdRaw(payload(b))); }
+
+  return { decode: decode, encode: encode, payload: payload, zstdRaw: zstdRaw };
+})();
+if (typeof module !== 'undefined') module.exports = Codec;
+
+</script>
+<script>
+(function () {
+  'use strict';
+  var HEROES = DATA.heroes, ITEMS = DATA.items;
+  var heroById = {}, itemById = {}, abilOwner = {};
+  HEROES.forEach(function (h) { heroById[h.id] = h; h.a.forEach(function (a) { abilOwner[a[0]] = { hero: h, name: a[1] }; }); });
+  ITEMS.forEach(function (i) { itemById[i.id] = i; });
+  var tagName = {};
+  (DATA.tags || []).forEach(function (t) { tagName[t[0]] = t[1]; });
+  function tierLabel(t) { return Number(t) === 5 ? 'Legendary' : 'tier ' + t; }
+  var SLOT = { w: 'Weapon', v: 'Vitality', s: 'Spirit' };
+  var STEPS = [{ t: 2, d: -1, label: 'unlock' }, { t: 1, d: -1, label: 'upgrade 1 (1 point)' },
+               { t: 1, d: -2, label: 'upgrade 2 (2 points)' }, { t: 1, d: -5, label: 'upgrade 3 (5 points)' }];
+  var LS_KEY = 'dlbm.v1';
+
+  var $ = function (id) { return document.getElementById(id); };
+  function h(tag, attrs, kids) {
+    var e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'text') e.textContent = v;
+      else if (k === 'class') e.className = v;
+      else if (k.slice(0, 2) === 'on') e.addEventListener(k.slice(2), v);
+      else e.setAttribute(k, v === true ? '' : v);
+    });
+    (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+
+  /* ---------- state ---------- */
+  var builds = {}, order = [], curId = null, activeCat = 0, filter = 'all';
+  var synced = {}, dirty = {}, timers = {}, chains = {};
+  var col = null;
+
+  function uid() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function cur() { return builds[curId]; }
+  function newBuild(heroId) {
+    return { id: uid(), name: 'New build', heroId: heroId || HEROES[0].id, desc: '',
+      cats: [{ name: 'Early Game', desc: '', w: 600, h: 0, opt: false, items: [] },
+             { name: 'Mid Game', desc: '', w: 600, h: 0, opt: false, items: [] },
+             { name: 'Late Game', desc: '', w: 600, h: 0, opt: false, items: [] }],
+      abil: [], tags: [], auto: true, updatedAt: 0 };
+  }
+  function clean(b, id) {
+    var o = { id: id, name: String(b.name || ''), heroId: Number(b.heroId) || HEROES[0].id, desc: String(b.desc || ''),
+      cats: [], abil: [], tags: (Array.isArray(b.tags) ? b.tags : []).map(Number).filter(Boolean).slice(0, 3), auto: !!b.auto, updatedAt: Number(b.updatedAt) || 0 };
+    (Array.isArray(b.cats) ? b.cats : []).forEach(function (c) {
+      o.cats.push({ name: String(c.name || ''), desc: String(c.desc || ''), w: Number(c.w) || Number(c.height) || 600, h: Number(c.h) || 0, opt: !!c.opt,
+        items: (Array.isArray(c.items) ? c.items : []).map(function (i) { return { id: Number(i.id) || 0, note: String(i.note || ''), nf: !!i.nf, imbue: Number(i.imbue) || 0 }; }) });
+    });
+    (Array.isArray(b.abil) ? b.abil : []).forEach(function (s) { o.abil.push({ id: Number(s.id) || 0, t: Number(s.t) || 1, d: Number(s.d) || -1 }); });
+    return o;
+  }
+  function body(b) { return { v: 1, name: b.name, heroId: b.heroId, desc: b.desc, cats: b.cats, abil: b.abil, tags: b.tags, auto: b.auto, updatedAt: b.updatedAt }; }
+
+  /* ---------- persistence ---------- */
+  function saveLocal() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ builds: builds, order: order, curId: curId, synced: synced })); } catch (e) {}
+  }
+  function loadLocal() {
+    try {
+      var s = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+      if (!s || !s.builds) return;
+      Object.keys(s.builds).forEach(function (id) { builds[id] = clean(s.builds[id], id); });
+      order = (s.order || []).filter(function (id) { return builds[id]; });
+      Object.keys(builds).forEach(function (id) { if (order.indexOf(id) < 0) order.push(id); });
+      curId = builds[s.curId] ? s.curId : null;
+      synced = s.synced || {};
+    } catch (e) {}
+  }
+  function setSync(t) { $('sync').textContent = t; }
+  function pushRemote(id) {
+    if (!col || !builds[id]) return;
+    var data = JSON.parse(JSON.stringify(body(builds[id])));
+    chains[id] = (chains[id] || Promise.resolve()).then(function () {
+      return col.doc(id).set(data).then(function () {
+        synced[id] = 1; saveLocal();
+        if (!timers[id]) delete dirty[id];
+        setSync('Saved to your account');
+      }, function (e) {
+        setSync(e && e.code === 'quota_exceeded' ? 'Storage is full. Delete a build to save new ones.' : 'Could not save to your account. Changes are kept on this device.');
+      });
+    });
+  }
+  function touch() {
+    var b = cur(); if (!b) return;
+    b.updatedAt = Date.now(); dirty[b.id] = 1; saveLocal();
+    var id = b.id;
+    clearTimeout(timers[id]);
+    if (col) { setSync('Saving…'); timers[id] = setTimeout(function () { timers[id] = 0; pushRemote(id); }, 900); }
+    if (!$('codebox').hidden) refreshCode();
+  }
+  function removeBuild(id) {
+    delete builds[id]; delete dirty[id]; clearTimeout(timers[id]);
+    order = order.filter(function (x) { return x !== id; });
+    if (col && synced[id]) chains[id] = (chains[id] || Promise.resolve()).then(function () { return col.doc(id).delete().catch(function () {}); });
+    delete synced[id];
+    if (curId === id) curId = order[0] || null;
+    if (!curId) { var nb = newBuild(); builds[nb.id] = nb; order.push(nb.id); curId = nb.id; }
+    saveLocal();
+  }
+  function onRemote(snap) {
+    var seen = {}, changed = false;
+    snap.docs.forEach(function (d) {
+      var id = d.id, r = d.data(); if (!r) return;
+      seen[id] = 1; synced[id] = 1;
+      var l = builds[id];
+      if (!l) { builds[id] = clean(r, id); order.push(id); changed = true; }
+      else if (!dirty[id] && (Number(r.updatedAt) || 0) > l.updatedAt) { builds[id] = clean(r, id); changed = true; }
+    });
+    if (!snap.metadata || !snap.metadata.fromCache) {
+      Object.keys(builds).forEach(function (id) {
+        if (seen[id]) return;
+        if (synced[id] && !dirty[id]) {            // deleted on another device
+          delete builds[id]; delete synced[id]; order = order.filter(function (x) { return x !== id; }); changed = true;
+        } else if (builds[id].updatedAt) pushRemote(id); // made here, not uploaded yet
+      });
+    }
+    if (!builds[curId]) curId = order[0] || null;
+    if (!curId) { var nb = newBuild(); builds[nb.id] = nb; order.push(nb.id); curId = nb.id; changed = true; }
+    saveLocal();
+    if (changed) {
+      var ae = document.activeElement, typing = ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && $('editor').contains(ae);
+      if (typing) renderTabs(); else renderAll();
+    }
+    setSync('Saved to your account');
+  }
+  function initSync() {
+    if (!window.claude || !window.claude.use) { setSync('Saved on this device only'); return; }
+    setSync('Connecting…');
+    Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+      var db = r[0], user = r[1];
+      if (!db || !user) { setSync('Saved on this device only'); return; }
+      return user.id().then(function (id) {
+        if (!id) { setSync('Saved on this device only'); return; }
+        col = db.collection('data/users/' + id);
+        col.onSnapshot(onRemote, function () { col = null; setSync('Sync stopped. Changes are kept on this device.'); });
+      });
+    }).catch(function () { setSync('Saved on this device only'); });
+  }
+
+  /* ---------- helpers ---------- */
+  function hero() { return heroById[cur().heroId]; }
+  function heroName(id) { return heroById[id] ? heroById[id].n : 'Hero ' + id; }
+  function blocked(it) { return it && it.x && it.x.indexOf(cur().heroId) >= 0; }
+  function friendlyCat(n) {
+    if (n.charAt(0) !== '#') return n;
+    return n.replace(/^#Citadel_HeroBuilds_/, '').replace(/^#/, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
+  }
+  function say(t) { $('status').textContent = t; }
+
+  /* ---------- render ---------- */
+  function renderTabs() {
+    var nav = $('builds'); nav.textContent = '';
+    order.forEach(function (id) {
+      var b = builds[id];
+      nav.appendChild(h('button', { class: 'tab', 'aria-current': id === curId ? 'true' : 'false', onclick: function () { curId = id; activeCat = 0; saveLocal(); renderAll(); } },
+        [b.name || 'Untitled build', h('small', { text: heroName(b.heroId) })]));
+    });
+    nav.appendChild(h('button', { text: 'New build', onclick: function () {
+      var nb = newBuild(cur() ? cur().heroId : 0); builds[nb.id] = nb; order.push(nb.id); curId = nb.id; activeCat = 0; saveLocal(); renderAll();
+      $('bname').focus(); $('bname').select();
+    } }));
+    nav.appendChild(h('button', { text: 'Load a code', onclick: function () { $('loadErr').hidden = true; $('loadText').value = ''; $('loadDlg').showModal(); } }));
+  }
+  function renderMeta() {
+    var b = cur(), sel = $('hero'); sel.textContent = '';
+    HEROES.forEach(function (x) { sel.appendChild(h('option', { value: x.id, text: x.n })); });
+    if (!heroById[b.heroId]) sel.appendChild(h('option', { value: b.heroId, text: 'Unknown hero (' + b.heroId + ')' }));
+    sel.value = b.heroId; $('bname').value = b.name; $('bdesc').value = b.desc;
+  }
+  function renderTags() {
+    var b = cur(), box = $('tags'); box.textContent = '';
+    b.tags.forEach(function (t, i) {
+      var it = itemById[t], nm = tagName[t] || (it ? it.n : 'Unknown tag (' + t + ')');
+      box.appendChild(h('span', { class: 'chip ' + (it ? it.s : 'u') }, [nm,
+        h('button', { class: 'icon quiet', 'aria-label': 'Remove tag ' + nm, text: '✕', onclick: function () { b.tags.splice(i, 1); touch(); renderTags(); } })]));
+    });
+    if (b.tags.length >= 3) { box.appendChild(h('span', { class: 'hint', style: 'margin:0', text: 'Three tags is the most the game allows.' })); return; }
+    var sel = h('select', { 'aria-label': 'Add a build tag', onchange: function () { var v = Number(sel.value); if (v) { b.tags.push(v); touch(); renderTags(); } } });
+    sel.appendChild(h('option', { value: 0, text: 'Add a tag…' }));
+    var g1 = h('optgroup', { label: 'Tags' }); (DATA.tags || []).forEach(function (t) { g1.appendChild(h('option', { value: t[0], text: t[1] })); });
+    var g2 = h('optgroup', { label: 'Items' });
+    ITEMS.slice().sort(function (a, c) { return a.n < c.n ? -1 : 1; }).forEach(function (it) { g2.appendChild(h('option', { value: it.id, text: it.n })); });
+    sel.appendChild(g1); sel.appendChild(g2); box.appendChild(sel);
+  }
+  function move(arr, i, d) { var j = i + d; if (j < 0 || j >= arr.length) return false; var t = arr[i]; arr[i] = arr[j]; arr[j] = t; return true; }
+  function renderCats() {
+    var b = cur(), box = $('cats'); box.textContent = '';
+    $('autoW').checked = !!b.auto;
+    if (activeCat >= b.cats.length) activeCat = Math.max(0, b.cats.length - 1);
+    $('catHint').textContent = b.cats.length ? 'Items you pick go into the category with the dashed outline.' : 'Add a category to start placing items.';
+    b.cats.forEach(function (c, ci) {
+      var name = h('input', { type: 'text', value: friendlyCat(c.name), 'aria-label': 'Category name', maxlength: 80,
+        oninput: function () { c.name = name.value; touch(); }, onfocus: function () { setActive(ci); } });
+      var head = h('div', { class: 'cat-head' }, [name,
+        h('button', { class: 'icon', 'aria-label': 'Move category up', text: '↑', disabled: ci === 0, onclick: function () { move(b.cats, ci, -1); activeCat = ci - 1; touch(); renderCats(); renderShop(); } }),
+        h('button', { class: 'icon', 'aria-label': 'Move category down', text: '↓', disabled: ci === b.cats.length - 1, onclick: function () { move(b.cats, ci, 1); activeCat = ci + 1; touch(); renderCats(); renderShop(); } }),
+        h('button', { class: 'icon danger', 'aria-label': 'Delete category', text: '✕', onclick: function () {
+          if (c.items.length && !confirm('Delete "' + friendlyCat(c.name) + '" and its ' + c.items.length + ' item(s)?')) return;
+          b.cats.splice(ci, 1); touch(); renderCats(); renderShop(); } })]);
+      var cdesc = h('input', { type: 'text', value: c.desc, placeholder: 'Category description (optional)', maxlength: 300, 'aria-label': 'Category description',
+        oninput: function () { c.desc = cdesc.value; touch(); }, onfocus: function () { setActive(ci); } });
+      var optBox = h('input', { type: 'checkbox', onchange: function () { c.opt = optBox.checked; touch(); } });
+      optBox.checked = !!c.opt;
+      var meta = h('div', { class: 'cat-meta' }, [cdesc, h('label', { class: 'opt' }, [optBox, 'Optional'])]);
+      var list = h('ul', { class: 'items' });
+      c.items.forEach(function (it, ii) {
+        var d = itemById[it.id], off = blocked(d);
+        var note = h('input', { type: 'text', class: 'note', value: it.note, placeholder: 'Note shown on this item in game', maxlength: 300, 'aria-label': 'Note for ' + (d ? d.n : 'item'),
+          hidden: !it.note, oninput: function () { it.note = note.value; touch(); } });
+        list.appendChild(h('li', { class: 'item ' + (d ? d.s : 'u') + (off ? ' off' : '') }, [
+          h('div', { class: 'line' }, [
+            h('span', { class: 'nm' }, [d ? d.n : 'Unknown item (' + it.id + ')', d ? h('span', { class: 'tier', text: SLOT[d.s] + ', ' + tierLabel(d.t) }) : null]),
+            h('button', { class: 'icon quiet', 'aria-label': 'Add or edit note', text: '✎', onclick: function () { note.hidden = false; note.focus(); } }),
+            h('button', { class: 'icon quiet', 'aria-label': 'Move item up', text: '↑', disabled: ii === 0, onclick: function () { move(c.items, ii, -1); touch(); renderCats(); } }),
+            h('button', { class: 'icon quiet', 'aria-label': 'Move item down', text: '↓', disabled: ii === c.items.length - 1, onclick: function () { move(c.items, ii, 1); touch(); renderCats(); } }),
+            h('button', { class: 'icon quiet danger', 'aria-label': 'Remove item', text: '✕', onclick: function () { c.items.splice(ii, 1); touch(); renderCats(); renderShop(); } })]),
+          off ? h('p', { class: 'off-note', text: 'Can\'t be bought on ' + heroName(b.heroId) + '. It will show greyed out in game.' }) : null,
+          note, imbueRow(it, d)]));
+      });
+      box.appendChild(h('div', { class: 'cat' + (ci === activeCat ? ' active' : ''), onclick: function (e) { if (!/^(BUTTON|INPUT|LABEL)$/.test(e.target.tagName)) setActive(ci); } }, [
+        head, meta, c.items.length ? list : h('p', { class: 'empty', text: 'No items yet.' }),
+        h('div', { class: 'row end', style: 'margin-top:.5rem' }, [h('button', { class: 'add-items', text: 'Add items', onclick: function () { setActive(ci); openShop(); } })])]));
+    });
+  }
+  function imbueRow(it, d) {
+    if (!it.imbue && !(d && d.i)) return null;
+    var hr = hero(), abs = hr ? hr.a : [];
+    var sel = h('select', { 'aria-label': 'Ability to imbue with ' + (d ? d.n : 'this item'), onchange: function () { it.imbue = Number(sel.value) || 0; touch(); renderCats(); } });
+    sel.appendChild(h('option', { value: 0, text: 'No ability chosen' }));
+    abs.forEach(function (a) { sel.appendChild(h('option', { value: a[0], text: a[1] })); });
+    var known = !it.imbue || abs.some(function (a) { return a[0] === it.imbue; });
+    if (!known) { var o = abilOwner[it.imbue]; sel.appendChild(h('option', { value: it.imbue, text: (o ? o.name + ' (' + o.hero.n + ')' : 'Another hero\'s ability') })); }
+    sel.value = it.imbue || 0;
+    return h('div', { class: 'imbue' }, [h('label', { text: 'Imbue' }), sel,
+      known ? null : h('p', { class: 'off-note', text: 'This imbue points at another hero\'s ability. Pick one of ' + heroName(cur().heroId) + '\'s.' })]);
+  }
+  function setActive(ci) {
+    if (activeCat === ci) return;
+    activeCat = ci;
+    Array.prototype.forEach.call($('cats').children, function (el, i) { el.classList.toggle('active', i === ci); });
+    renderShopTarget();
+  }
+  function renderAbil() {
+    var b = cur(), hr = hero(), box = $('abil'); box.textContent = '';
+    var foreign = b.abil.filter(function (s) { return !hr || !hr.a.some(function (a) { return a[0] === s.id; }); });
+    $('abUndo').disabled = $('abClear').disabled = !b.abil.length;
+    if (foreign.length) {
+      var o = abilOwner[foreign[0].id];
+      box.appendChild(h('p', { class: 'warn', text: 'This order was set for ' + (o ? o.hero.n : 'another hero') + '\'s abilities, so it will not apply to ' + heroName(b.heroId) + '. Clear it to set a new one.' }));
+    }
+    if (!hr || !hr.a.length) {
+      box.appendChild(h('p', { class: 'hint', text: 'Ability data for this hero is not available yet. The build code will leave the ability order unset.' }));
+    } else if (!foreign.length) {
+      var btns = h('div', { class: 'abil-btns' });
+      hr.a.forEach(function (a) {
+        var n = b.abil.filter(function (s) { return s.id === a[0]; }).length;
+        btns.appendChild(h('button', { disabled: n >= 4, onclick: function () { var st = STEPS[n]; b.abil.push({ id: a[0], t: st.t, d: st.d }); touch(); renderAbil(); } },
+          [a[1], h('span', { class: 'pips', text: n >= 4 ? 'Maxed' : 'Next: ' + STEPS[n].label })]));
+      });
+      box.appendChild(btns);
+      if (!b.abil.length) box.appendChild(h('p', { class: 'hint', text: 'Tap abilities in the order you want to spend points. Leave empty to skip.' }));
+    }
+    if (b.abil.length) {
+      var ol = h('ol', { class: 'steps' }), count = {};
+      b.abil.forEach(function (s) {
+        var k = count[s.id] = (count[s.id] || 0) + 1, o = abilOwner[s.id];
+        ol.appendChild(h('li', { text: (o ? o.name : 'Unknown ability') + ': ' + (STEPS[k - 1] ? STEPS[k - 1].label : 'upgrade') }));
+      });
+      box.appendChild(ol);
+    }
+  }
+  function renderShopTarget() {
+    var b = cur(), c = b.cats[activeCat];
+    $('shopTarget').textContent = c ? 'Adding to: ' + (friendlyCat(c.name) || 'Unnamed category') : 'Add a category first.';
+  }
+  function renderShop() {
+    renderShopTarget();
+    var b = cur(), q = $('q').value.trim().toLowerCase(), box = $('shopList'); box.textContent = '';
+    var fl = $('filters'); fl.textContent = '';
+    [['all', 'All'], ['w', 'Weapon'], ['v', 'Vitality'], ['s', 'Spirit']].forEach(function (f) {
+      fl.appendChild(h('button', { text: f[1], 'aria-pressed': filter === f[0] ? 'true' : 'false', onclick: function () { filter = f[0]; renderShop(); } }));
+    });
+    var used = {};
+    b.cats.forEach(function (c) { c.items.forEach(function (i) { used[i.id] = (used[i.id] || 0) + 1; }); });
+    var groups = {}, keys = [];
+    ITEMS.forEach(function (it) {
+      if (filter !== 'all' && it.s !== filter) return;
+      if (q && (it.n + ' ' + (it.k || '')).toLowerCase().indexOf(q) < 0) return;
+      var k = it.s + it.t; if (!groups[k]) { groups[k] = []; keys.push(k); } groups[k].push(it);
+    });
+    if (!keys.length) { box.appendChild(h('p', { class: 'empty', text: 'No items match "' + $('q').value + '".' })); return; }
+    keys.forEach(function (k) {
+      var s = k.charAt(0), grid = h('div', { class: 'shop-grid ' + s });
+      groups[k].forEach(function (it) {
+        var off = blocked(it);
+        var btn = h('button', { class: off ? 'off' : '', title: off ? 'Can\'t be bought on ' + heroName(b.heroId) : null, onclick: function () {
+          var c = cur().cats[activeCat];
+          if (!c) { say('Add a category first.'); return; }
+          c.items.push({ id: it.id, note: '', nf: false, imbue: 0 }); touch(); renderCats();
+          used[it.id] = (used[it.id] || 0) + 1; cnt.textContent = '×' + used[it.id];
+          btn.classList.add('flash'); setTimeout(function () { btn.classList.remove('flash'); }, 180);
+        } }, [it.n]);
+        var cnt = h('span', { class: 'n', text: used[it.id] ? '×' + used[it.id] : '' });
+        btn.appendChild(cnt); grid.appendChild(btn);
+      });
+      box.appendChild(h('div', { class: s }, [h('h3', { text: SLOT[s] + ', ' + tierLabel(k.slice(1)) }), grid]));
+    });
+  }
+  function openShop() { $('shop').classList.add('open'); renderShop(); $('shop').scrollTop = 0; }
+  function renderAll() { renderTabs(); renderMeta(); renderTags(); renderCats(); renderAbil(); renderShop(); if (!$('codebox').hidden) refreshCode(); say(''); }
+
+  /* ---------- code out / in ---------- */
+  /* One-row width measured from game codes: 2 items 175.5, 3 257.25, 4 339, 5 420.75 */
+  /* Widest category the editor allows is 1083, which holds 13 items in a row.
+     A 6-item, 2-per-row (3 row) category measured 402.75 tall; one row is 178.5. */
+  var PER_ROW = 13, ROW_H = 112.125;
+  function fitWidth(n) { return 12 + 81.75 * Math.min(Math.max(n, 1), PER_ROW); }
+  function fitHeight(n, h) { var rows = Math.ceil(n / PER_ROW); return rows > 1 ? 178.5 + ROW_H * (rows - 1) : h; }
+  function makeCode() {
+    var b = cur();
+    return Codec.encode({ buildId: 1, heroId: b.heroId, name: b.name || 'Untitled build', desc: b.desc,
+      cats: b.cats.map(function (c) { return { name: c.name || 'Category', desc: c.desc, w: b.auto ? fitWidth(c.items.length) : c.w, h: b.auto ? fitHeight(c.items.length, c.h) : c.h, opt: c.opt, items: c.items }; }), abil: b.abil, tags: b.tags });
+  }
+  function refreshCode() { try { $('codebox').value = makeCode(); } catch (e) { $('codebox').value = ''; say(e.message); } }
+  function copyCode() {
+    var code; try { code = makeCode(); } catch (e) { say(e.message); return; }
+    var done = function () { say('Copied. In Deadlock, open a build in the editor and press the paste button.'); };
+    var fallback = function () {
+      var box = $('codebox'); box.hidden = false; $('toggleCode').textContent = 'Hide code'; box.value = code; box.focus(); box.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      if (ok) done(); else say('Copying is blocked here. The code is selected below, so copy it by hand.');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, fallback); else fallback();
+  }
+  function loadCode() {
+    var err = $('loadErr'), txt = $('loadText').value.trim();
+    try {
+      if (!txt) throw new Error('Paste a build code first.');
+      var d = Codec.decode(txt, function (raw) { return fzstd.decompress(raw); });
+      if (!d.heroId) throw new Error('That code has no hero in it, so it is probably not a build code.');
+      var nb = clean(d, uid());
+      nb.cats.forEach(function (c) { c.name = friendlyCat(c.name); });
+      nb.updatedAt = 0;
+      builds[nb.id] = nb; order.push(nb.id); curId = nb.id; activeCat = 0;
+      $('loadDlg').close(); renderAll(); touch(); renderTabs();
+      say('Loaded "' + nb.name + '" as a new build.');
+    } catch (e) {
+      err.textContent = /build code|Paste/.test(e.message) ? e.message : 'That code could not be read. Check that the whole code was pasted.';
+      err.hidden = false;
+    }
+  }
+
+  /* ---------- wire up ---------- */
+  $('hero').addEventListener('change', function () { cur().heroId = Number(this.value); touch(); renderTabs(); renderCats(); renderAbil(); renderShop(); });
+  $('bname').addEventListener('input', function () { cur().name = this.value; touch(); });
+  $('bname').addEventListener('change', renderTabs);
+  $('bdesc').addEventListener('input', function () { cur().desc = this.value; touch(); });
+  $('delBuild').addEventListener('click', function () { if (confirm('Delete "' + (cur().name || 'Untitled build') + '"? This cannot be undone.')) { removeBuild(curId); renderAll(); } });
+  $('addCat').addEventListener('click', function () {
+    var b = cur(); b.cats.push({ name: 'Category ' + (b.cats.length + 1), desc: '', w: 600, h: 0, opt: false, items: [] }); activeCat = b.cats.length - 1; touch(); renderCats(); renderShop();
+    var inputs = $('cats').querySelectorAll('.cat-head input'); var last = inputs[inputs.length - 1]; if (last) { last.focus(); last.select(); }
+  });
+  $('autoW').addEventListener('change', function () { cur().auto = this.checked; touch(); });
+  $('abUndo').addEventListener('click', function () { cur().abil.pop(); touch(); renderAbil(); });
+  $('abClear').addEventListener('click', function () { cur().abil = []; touch(); renderAbil(); });
+  $('q').addEventListener('input', renderShop);
+  $('shopClose').addEventListener('click', function () { $('shop').classList.remove('open'); });
+  $('copy').addEventListener('click', copyCode);
+  $('toggleCode').addEventListener('click', function () {
+    var box = $('codebox'); box.hidden = !box.hidden; this.textContent = box.hidden ? 'Show code' : 'Hide code'; if (!box.hidden) refreshCode();
+  });
+  $('loadCancel').addEventListener('click', function () { $('loadDlg').close(); });
+  $('loadGo').addEventListener('click', loadCode);
+
+  loadLocal();
+  if (!curId) { if (order.length) curId = order[0]; else { var nb = newBuild(); builds[nb.id] = nb; order.push(nb.id); curId = nb.id; } }
+  renderAll();
+  initSync();
+  window.__dlbm = { makeCode: makeCode, builds: builds, cur: cur };
+})();
+
+</script>
+</body>
+</html>

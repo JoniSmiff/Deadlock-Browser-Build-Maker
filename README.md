@@ -6,6 +6,10 @@ Deadlock's build editor can copy a build to the clipboard as a text code and pas
 
 It is a single file, `index.html`, with no server and no install.
 
+## Try it out
+
+https://jonismiff.github.io/Deadlock-Browser-Build-Maker/
+
 ## Added Functionality
 
 You can paste a build copied from the game into the tool with **Load a code**. Once it is loaded you can:
@@ -17,7 +21,7 @@ The game names a copied build "Copy of" followed by the original name. Loading r
 
 ## Using it
 
-1. Open `index.html` in a browser, or visit the hosted page if you have set one up (see below).
+1. Open the page linked above, or open `index.html` in a browser.
 2. Pick a hero, name the build and fill in the categories.
 3. Press **Copy build code**.
 4. In Deadlock, open a build in the editor (Build Browser, then Create New Build) and press the paste button.
@@ -36,12 +40,6 @@ Pasting replaces whatever is in the build you have open. It never changes any ot
 **Load a code** reads any code copied from the game, so you can edit a public build or move a build to a different hero. Items the chosen hero can't buy are flagged, and the game shows them greyed out.
 
 Builds are saved in your browser's local storage. To move one to another device, copy its code and load it there.
-
-## Hosting it with GitHub Pages
-
-1. In the repository, open **Settings**, then **Pages**.
-2. Under **Build and deployment**, choose **Deploy from a branch**, pick the `main` branch and the `/ (root)` folder, and save.
-3. After a minute the page is live at `https://<your-username>.github.io/<repository-name>/`.
 
 ## Keeping it current after a patch
 

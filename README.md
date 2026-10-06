@@ -13,6 +13,8 @@ You can paste a build copied from the game into the tool with **Load a code**. O
 - **Add duplicates of items.** Put the same item in the build more than once.
 - **Swap the hero.** Change which hero the build applies to, then paste it into that hero's editor.
 
+The game names a copied build "Copy of" followed by the original name. Loading removes that from the build name. To keep it, untick **Remove "Copy of" from the build name** in the load box.
+
 ## Using it
 
 1. Open `index.html` in a browser, or visit the hosted page if you have set one up (see below).

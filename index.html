@@ -114,6 +114,8 @@ ol.steps{margin:.7rem 0 0;padding-left:1.6rem;display:grid;gap:.15rem;font-size:
 #codebox{flex:1 1 100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;min-height:70px;word-break:break-all}
 dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);padding:1rem;width:min(34rem,calc(100vw - 2rem))}
 dialog::backdrop{background:rgba(0,0,0,.55)}
+button.danger.solid{background:var(--danger);color:var(--panel);border-color:var(--danger);font-weight:600}
+#askMsg{margin:0;overflow-wrap:anywhere}
 [hidden]{display:none!important}
 @media (max-width:899px){
   #shop{position:fixed;inset:0;z-index:10;margin:0;border:0;border-radius:0;overflow:auto;
@@ -189,8 +191,14 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <h2 id="loadH">Load a build code</h2>
   <p class="hint">Copy a build in Deadlock, then paste the code here. It opens as a new build you can edit or move to another hero.</p>
   <textarea id="loadText" style="margin-top:.6rem;min-height:120px" aria-label="Build code to load"></textarea>
+  <label class="check"><input type="checkbox" id="loadStrip"> Remove "Copy of" from the build name</label>
   <p class="warn" id="loadErr" hidden></p>
   <div class="row end" style="margin-top:.7rem"><button id="loadCancel" class="quiet">Cancel</button><button id="loadGo" class="primary">Load code</button></div>
+</dialog>
+
+<dialog id="askDlg" aria-labelledby="askMsg">
+  <p id="askMsg"></p>
+  <div class="row end" style="margin-top:.9rem"><button id="askNo" class="quiet">Cancel</button><button id="askYes" class="danger solid">Delete</button></div>
 </dialog>
 <script>
 /* fzstd 0.1.1, MIT License, (c) Arjun Barrett */
@@ -398,6 +406,7 @@ if (typeof module !== 'undefined') module.exports = Codec;
   var builds = {}, order = [], curId = null, activeCat = 0, filter = 'all';
   var synced = {}, dirty = {}, timers = {}, chains = {};
   var col = null;
+  var stripCopy = true;
 
   function uid() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function cur() { return builds[curId]; }
@@ -422,12 +431,13 @@ if (typeof module !== 'undefined') module.exports = Codec;
 
   /* ---------- persistence ---------- */
   function saveLocal() {
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ builds: builds, order: order, curId: curId, synced: synced })); } catch (e) {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ builds: builds, order: order, curId: curId, synced: synced, stripCopy: stripCopy })); } catch (e) {}
   }
   function loadLocal() {
     try {
       var s = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
       if (!s || !s.builds) return;
+      stripCopy = s.stripCopy !== false;
       Object.keys(s.builds).forEach(function (id) { builds[id] = clean(s.builds[id], id); });
       order = (s.order || []).filter(function (id) { return builds[id]; });
       Object.keys(builds).forEach(function (id) { if (order.indexOf(id) < 0) order.push(id); });
@@ -515,6 +525,9 @@ if (typeof module !== 'undefined') module.exports = Codec;
     return n.replace(/^#Citadel_HeroBuilds_/, '').replace(/^#/, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
   }
   function say(t) { $('status').textContent = t; }
+  /* In-page confirmation. Some hosts never show the browser's confirm() and answer "no" for it. */
+  var askFn = null;
+  function ask(msg, fn) { askFn = fn; $('askMsg').textContent = msg; $('askDlg').showModal(); }
 
   /* ---------- render ---------- */
   function renderTabs() {
@@ -564,8 +577,8 @@ if (typeof module !== 'undefined') module.exports = Codec;
         h('button', { class: 'icon', 'aria-label': 'Move category up', text: '↑', disabled: ci === 0, onclick: function () { move(b.cats, ci, -1); activeCat = ci - 1; touch(); renderCats(); renderShop(); } }),
         h('button', { class: 'icon', 'aria-label': 'Move category down', text: '↓', disabled: ci === b.cats.length - 1, onclick: function () { move(b.cats, ci, 1); activeCat = ci + 1; touch(); renderCats(); renderShop(); } }),
         h('button', { class: 'icon danger', 'aria-label': 'Delete category', text: '✕', onclick: function () {
-          if (c.items.length && !confirm('Delete "' + friendlyCat(c.name) + '" and its ' + c.items.length + ' item(s)?')) return;
-          b.cats.splice(ci, 1); touch(); renderCats(); renderShop(); } })]);
+          var go = function () { var i = b.cats.indexOf(c); if (cur() !== b || i < 0) return; b.cats.splice(i, 1); touch(); renderCats(); renderShop(); };
+          if (c.items.length) ask('Delete "' + friendlyCat(c.name) + '" and its ' + c.items.length + ' item(s)?', go); else go(); } })]);
       var cdesc = h('input', { type: 'text', value: c.desc, placeholder: 'Category description (optional)', maxlength: 300, 'aria-label': 'Category description',
         oninput: function () { c.desc = cdesc.value; touch(); }, onfocus: function () { setActive(ci); } });
       var optBox = h('input', { type: 'checkbox', onchange: function () { c.opt = optBox.checked; touch(); } });
@@ -701,6 +714,8 @@ if (typeof module !== 'undefined') module.exports = Codec;
     };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, fallback); else fallback();
   }
+  /* The game names a copied build "Copy of <name>", once per copy. */
+  function dropCopyOf(name) { return name.replace(/^\s*(?:copy of\s+)+/i, '') || name; }
   function loadCode() {
     var err = $('loadErr'), txt = $('loadText').value.trim();
     try {
@@ -708,6 +723,7 @@ if (typeof module !== 'undefined') module.exports = Codec;
       var d = Codec.decode(txt, function (raw) { return fzstd.decompress(raw); });
       if (!d.heroId) throw new Error('That code has no hero in it, so it is probably not a build code.');
       var nb = clean(d, uid());
+      if (stripCopy) nb.name = dropCopyOf(nb.name);
       nb.cats.forEach(function (c) { c.name = friendlyCat(c.name); });
       nb.updatedAt = 0;
       builds[nb.id] = nb; order.push(nb.id); curId = nb.id; activeCat = 0;
@@ -724,7 +740,10 @@ if (typeof module !== 'undefined') module.exports = Codec;
   $('bname').addEventListener('input', function () { cur().name = this.value; touch(); });
   $('bname').addEventListener('change', renderTabs);
   $('bdesc').addEventListener('input', function () { cur().desc = this.value; touch(); });
-  $('delBuild').addEventListener('click', function () { if (confirm('Delete "' + (cur().name || 'Untitled build') + '"? This cannot be undone.')) { removeBuild(curId); renderAll(); } });
+  $('delBuild').addEventListener('click', function () {
+    var id = curId;
+    ask('Delete "' + (cur().name || 'Untitled build') + '"? This cannot be undone.', function () { if (!builds[id]) return; removeBuild(id); renderAll(); });
+  });
   $('addCat').addEventListener('click', function () {
     var b = cur(); b.cats.push({ name: 'Category ' + (b.cats.length + 1), desc: '', w: 600, h: 0, opt: false, items: [] }); activeCat = b.cats.length - 1; touch(); renderCats(); renderShop();
     var inputs = $('cats').querySelectorAll('.cat-head input'); var last = inputs[inputs.length - 1]; if (last) { last.focus(); last.select(); }
@@ -740,8 +759,12 @@ if (typeof module !== 'undefined') module.exports = Codec;
   });
   $('loadCancel').addEventListener('click', function () { $('loadDlg').close(); });
   $('loadGo').addEventListener('click', loadCode);
+  $('loadStrip').addEventListener('change', function () { stripCopy = this.checked; saveLocal(); });
+  $('askNo').addEventListener('click', function () { askFn = null; $('askDlg').close(); });
+  $('askYes').addEventListener('click', function () { var fn = askFn; askFn = null; $('askDlg').close(); if (fn) fn(); });
 
   loadLocal();
+  $('loadStrip').checked = stripCopy;
   if (!curId) { if (order.length) curId = order[0]; else { var nb = newBuild(); builds[nb.id] = nb; order.push(nb.id); curId = nb.id; } }
   renderAll();
   initSync();

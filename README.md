@@ -111,6 +111,7 @@ Other things worth knowing:
 - **The game compresses, this tool does not.** The game writes compressed Zstandard frames. This tool writes uncompressed (raw-block) frames, which are valid Zstandard and which the game accepts. Reading the game's codes does need a real decompressor.
 - **The hero is not enforced.** A code for one hero pastes into another hero's editor; items that hero can't buy show greyed out.
 - **Category width** is 12 + 81.75 per item in a row. The widest a category can be is 1083, which fits 13 items. Each extra row adds about 112 to the height.
+- **Builds have a size limit.** Since the 6 October 2026 update the game will not publish a build whose message is larger than 16,000 bytes. The tool still writes the code, and tells you when a build is over the limit.
 
 ## Credits
 
